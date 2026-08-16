@@ -1,0 +1,71 @@
+# EXAMPLE ICP — commercial HVAC/mechanical service contractors.
+# This is a worked, neutral example showing every field the pipeline reads.
+# Your real ICP should be produced by the interview (prompts/interview.md) —
+# run it with your agent, answer the challenges, and let it write this file.
+
+name: example
+sells: >
+  Scheduling/dispatch software (~$2k/mo) for commercial mechanical service
+  contractors running 10+ field technicians.
+
+fit: >
+  Commercial HVAC/mechanical/refrigeration service contractors with 20+
+  employees whose technicians run scheduled maintenance routes under service
+  contracts — recurring revenue, dispatch pain, compliance paperwork (EPA 608
+  refrigerant logs) that is mandate-tied.
+misfit: >
+  Residential-only shops (no contract routes); equipment distributors;
+  general contractors (project work, not service routes); property managers
+  (they buy the service, they don't dispatch it); sub-20-employee shops;
+  software; staffing.
+
+min_employees: 20
+
+segments:
+  commercial-hvac: {label: "Commercial HVAC service",        registry: osha_ita, naics: ["238220"]}
+  refrigeration:   {label: "Commercial refrigeration svc",   registry: osha_ita, naics: ["238220"]}
+  mechanical:      {label: "Mechanical contractors (svc arm)", registry: osha_ita, naics: ["238220"]}
+
+lanes:
+  visit:
+    description: "Within ~2h drive of your office; verified real facility"
+    max_drive_min: 120
+    demote_when: "geocode outside radius OR facility-existence check fails"
+  call:
+    description: "Default lane"
+
+titles:
+  ops:
+    - service manager
+    - service operations
+    - dispatch manager
+    - operations manager
+    - director of operations
+    - field supervisor
+    - service coordinator
+    - branch manager
+    - general manager
+  bad:
+    - account manager
+    - sales
+    - recruit
+    - marketing
+    - "hr "
+    - human resources
+    - talent
+    - ceo
+    - president
+    - founder
+    - owner
+
+drop:
+  patterns:
+    - residential
+    - property management
+    - realty
+    - staffing
+    - software
+  # Named drops: companies that pass every pattern but were adjudicated MISFIT
+  # by a human/agent read. Grows monotonically.
+  named:
+    - "Frostline Beverage Distribution"

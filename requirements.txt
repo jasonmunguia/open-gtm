@@ -1,0 +1,3 @@
+pyyaml>=6
+# fsis registry only:
+# scrapling>=0.4
