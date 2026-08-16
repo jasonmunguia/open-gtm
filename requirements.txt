@@ -1,3 +1,4 @@
 pyyaml>=6
-# fsis registry only:
+pytest>=8
+# fsis registry only (bot-walled site needs a stealth browser fetch):
 # scrapling>=0.4
