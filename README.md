@@ -1,5 +1,7 @@
 # open-gtm
 
+Built by [Jason Munguia](https://github.com/jasonmunguia). Apache-2.0 — free to use, fork and build on, **with credit**.
+
 **Registry-first, phone-first lead generation. Self-hosted, BYOK/BYOM. The paid step runs last.**
 
 Clone it, hand it to your coding agent, and be running in ~30 minutes. First
@@ -74,6 +76,6 @@ and the next run rebuilds identically) → `out/` (call + visit CSVs).
 
 ## License
 
-MIT. Built by [Jason Munguia](https://www.linkedin.com/in/jason-munguia/) —
+Apache-2.0 — free to use, fork and build on, **with credit**. Built by [Jason Munguia](https://www.linkedin.com/in/jason-munguia/) —
 distilled from real runs that produced 3,200+ QA'd, phone-ready leads at $0
 in data costs.
