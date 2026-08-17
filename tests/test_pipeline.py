@@ -185,3 +185,42 @@ class TestLedger(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class TestNoUrlPromotion(unittest.TestCase):
+    def test_promotes_unmatched_champions_only(self):
+        # Run-1 scar: verified candidates without a URL are still dialable
+        # leads. Gate-passing titles promote; others don't; already-joined
+        # people don't duplicate; promoted rows never take the visit lane.
+        from gtm import nourl
+        icp = load_icp("example")
+        with tempfile.TemporaryDirectory() as td:
+            shard = Path(td) / "candidates_c1.jsonl"
+            shard.write_text(
+                '{"first":"Ana","company":"Bay Mech","title":"Service Manager","lane":"visit","icp":"commercial-hvac"}\n'
+                '{"first":"Bob","company":"Bay Mech","title":"Sales Director","lane":"call","icp":"commercial-hvac"}\n'
+                '{"first":"Cara","company":"Joined Co","title":"Service Manager","lane":"call","icp":"commercial-hvac"}\n')
+            joined = {person_key("Cara", "Joined Co")}
+            rows = nourl.promote([shard], joined, icp)
+            self.assertEqual([r["name"] for r in rows], ["Ana"])
+            self.assertEqual(rows[0]["lane"], "call")  # no URL -> never visit
+            self.assertIn("NO-URL", rows[0]["evidence"])
+
+
+class TestQAVerdicts(unittest.TestCase):
+    def test_misfit_sidelined_unclassified_kept(self):
+        from gtm import qa
+        with tempfile.TemporaryDirectory() as td:
+            vf = Path(td) / "verdicts.jsonl"
+            vf.write_text(
+                '{"company":"Good Co","verdict":"FIT","segment":"commercial-hvac"}\n'
+                '{"company":"Bad Distribution Co","verdict":"MISFIT","reason":"distributor"}\n')
+            verdicts = qa.load_verdicts(vf)
+            leads = [{"company": "Good Co Inc"}, {"company": "Bad Distribution Co LLC"},
+                     {"company": "Never Classified Co"}]
+            side = Path(td) / "removed.jsonl"
+            kept, removed = qa.apply(leads, verdicts, side)
+            self.assertEqual(len(kept), 2)      # FIT + unclassified both kept
+            self.assertEqual(len(removed), 1)
+            self.assertEqual(removed[0]["misfit_reason"], "distributor")
+            self.assertTrue(side.is_file())     # recoverable, never deleted

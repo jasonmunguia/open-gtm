@@ -16,16 +16,23 @@ import csv
 import io
 import urllib.request
 
+from . import _net
+
+# One in-process download per URL. The 2025 file is ~84MB; an ICP with three
+# NAICS-backed segments would otherwise pull it three times in one run.
+_CACHE = {}
+
 # Newest full-coverage file at verification time. Check the index page yearly;
 # OSHA posts current-year partials (suffix `_through_<date>`) and prior-year zips.
 DEFAULT_URL = "https://www.osha.gov/sites/default/files/ITA_300A_Summary_Data_2025_through_03-15-2026_v2.csv"
 
 
-def fetch(url=DEFAULT_URL, timeout=120):
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (gtm-system registry pull)"})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        text = r.read().decode("utf-8", "ignore")
-    return csv.DictReader(io.StringIO(text))
+def fetch(url=DEFAULT_URL, timeout=300):
+    if url not in _CACHE:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (gtm-system registry pull)"})
+        with _net.urlopen(req, timeout=timeout) as r:
+            _CACHE[url] = r.read().decode("utf-8", "ignore")
+    return csv.DictReader(io.StringIO(_CACHE[url]))
 
 
 def to_companies(rows, naics_prefixes, min_employees=0, states=None):

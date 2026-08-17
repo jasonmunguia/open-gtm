@@ -14,6 +14,8 @@ import time
 import urllib.parse
 import urllib.request
 
+from . import _net
+
 UA = "gtm-system/1.0 (visit-radius verification)"
 
 
@@ -22,7 +24,7 @@ def geocode(address, timeout=20):
     req = urllib.request.Request(
         f"https://nominatim.openstreetmap.org/search?{q}", headers={"User-Agent": UA}
     )
-    with urllib.request.urlopen(req, timeout=timeout) as r:
+    with _net.urlopen(req, timeout=timeout) as r:
         rows = json.load(r)
     time.sleep(1.1)  # etiquette floor, not a tunable
     if not rows:

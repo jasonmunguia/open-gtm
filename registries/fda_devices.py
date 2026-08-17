@@ -13,6 +13,8 @@ import json
 import urllib.parse
 import urllib.request
 
+from . import _net
+
 BASE = "https://api.fda.gov/device/registrationlisting.json"
 PAGE_LIMIT = 100  # API max per request; paginate with skip (max skip 25k)
 
@@ -27,7 +29,7 @@ def fetch(state, max_rows=2000, timeout=60):
         })
         req = urllib.request.Request(f"{BASE}?{q}", headers={"User-Agent": "gtm-system registry pull"})
         try:
-            with urllib.request.urlopen(req, timeout=timeout) as r:
+            with _net.urlopen(req, timeout=timeout) as r:
                 d = json.load(r)
         except urllib.error.HTTPError as e:
             if e.code == 404:

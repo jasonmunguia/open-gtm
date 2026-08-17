@@ -7,6 +7,34 @@ than a missing one, because it stops anyone from looking.
 
 ---
 
+## 2026-08-17 — The release gate and the live run each caught what the other couldn't
+
+Recruiters will read this repo, so every claim was converted to a machine
+verdict. Four catches today, each a different failure class:
+
+1. **pytest was instructed but never named** (startup_test, half 1): the README
+   told a cold agent to run pytest; requirements.txt shipped only pyyaml. A
+   dependency you assume is a dependency someone else doesn't have.
+2. **CERTIFICATE_VERIFY_FAILED on the first live pull**: python.org Python on
+   macOS has no CA bundle, so stock urllib dies on perfectly good government
+   sites. Fixed structurally (`registries/_net.py` + certifi) so a stranger's
+   first run doesn't end in a cryptic SSL error. Unit tests can never catch
+   this; only a live run can.
+3. **The 84MB ITA file downloaded once per segment** — three times for an ICP
+   with three NAICS-backed segments. Waste, not wrongness; caught only by
+   reading the run plan against the file size before running it.
+4. **Two July passes were missing from the rebuild** (found by diffing module
+   lists against the original scripts): the NO-URL promotion pass — the retro
+   explicitly said "don't skip it" — and the QA verdict-apply loop. Both now
+   code (`gtm/nourl.py`, `gtm/qa.py`), both tested (29 tests).
+
+**And the live numbers, through the shipped CLI path** (2026-08-17):
+registry pull for the six-segment industrial ICP → **10,243 companies**
+(FSIS 7,237 · ITA 888+771+756 · openFDA 591), hygiene → 10,218 kept /
+25 dropped-recoverable, and **6,985 companies already carrying a phone
+number before any paid enrichment step**. The registry-first and phone-first
+claims are no longer architecture claims; they are measurements.
+
 ## 2026-08-16 — The first smoke test caught two shipping bugs
 
 Built the spine, ran 19 offline tests green, then ran the CLI end-to-end on

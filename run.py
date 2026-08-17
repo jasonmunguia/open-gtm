@@ -27,6 +27,8 @@ from gtm import export as export_mod
 from gtm import hygiene as hygiene_mod
 from gtm import icp as icp_mod
 from gtm import join as join_mod
+from gtm import nourl as nourl_mod
+from gtm import qa as qa_mod
 from gtm.ledger import Ledger
 from gtm.paths import data
 
@@ -121,9 +123,16 @@ def cmd_join(args):
     if curated_file.is_file():
         curated = set(json.loads(curated_file.read_text()))
     leads = join_mod.join(hits, tmap, icp, curated)
+    # NO-URL promotion — the pass run 1 skipped and the retro said never to.
+    from gtm.normalize import person_key
+    joined = {person_key(r["first"], r["company"]) for r in leads}
+    promoted = nourl_mod.promote(cand_files, joined, icp)
+    leads += promoted
     with open(d / "derived" / "leads.jsonl", "w") as f:
         f.writelines(json.dumps(r) + "\n" for r in leads)
-    print(f"join: {len(hits)} hits x {len(tmap)} candidates -> {len(leads)} leads")
+    print(f"join: {len(hits)} hits x {len(tmap)} candidates -> "
+          f"{len(leads) - len(promoted)} URL-verified + {len(promoted)} NO-URL promoted "
+          f"= {len(leads)} leads")
     return 0
 
 
@@ -135,6 +144,13 @@ def cmd_export(args):
         print("no leads yet — run join first")
         return 1
     leads = [json.loads(l) for l in leads_file.read_text().splitlines() if l.strip()]
+    # Apply QA verdicts if the classify pass has produced them (MISFIT rows go
+    # to a recoverable sidecar; unclassified companies are kept, not dropped).
+    verdict_file = d / "derived" / "verdicts.jsonl"
+    if verdict_file.is_file():
+        verdicts = qa_mod.load_verdicts(verdict_file)
+        leads, removed = qa_mod.apply(leads, verdicts, d / "derived" / "removed_misfit.jsonl")
+        print(f"qa: {len(removed)} MISFIT leads sidelined (recoverable)")
     n_call, n_visit = export_mod.export(leads, d / "out")
     print(f"export: {n_call} call, {n_visit} visit -> {d/'out'}")
     return 0
