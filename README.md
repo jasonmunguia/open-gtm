@@ -76,6 +76,7 @@ and the next run rebuilds identically) → `out/` (call + visit CSVs).
 
 ## License
 
-Apache-2.0 — free to use, fork and build on, **with credit**. Built by [Jason Munguia](https://www.linkedin.com/in/jason-munguia/) —
+Apache-2.0 — free to use, fork and build on, **with credit** (see NOTICE).
+Built by [Jason Munguia](https://www.linkedin.com/in/jason-munguia/) —
 distilled from real runs that produced 3,200+ QA'd, phone-ready leads at $0
 in data costs.
