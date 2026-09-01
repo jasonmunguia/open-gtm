@@ -22,9 +22,24 @@ class SpendNotConfirmed(RuntimeError):
 
 
 def request_enrichment(leads, provider, confirm=None):
-    """provider: an adapter exposing .estimate(rows) -> credits and
-    .enrich(rows) -> rows-with-contact-fields (e.g. a FullEnrich client, built
-    against your own account per SETUP.md).
+    """provider: the BYOK adapter you build against your own account (see
+    SETUP.md §8 for where it lives and how it is invoked). Two methods:
+
+        estimate(n: int) -> credits
+            n is a ROW COUNT, not the rows. Called before the gate, on every
+            call, so it must not spend anything or hit a metered endpoint.
+
+        enrich(rows: list[dict]) -> list[dict]
+            Returns the same rows with contact fields merged in. Recognised
+            keys, in the order rank_contactability prefers them:
+                mobile          direct mobile   — the goal
+                phone           direct dial
+                company_phone   switchboard     — often already on the row
+                                                  from the registry
+                email           secondary, not the point
+            Return every input row, enriched or not, in input order. Dropping
+            misses breaks the join with the pre-enrichment sheet; a miss is a
+            row whose contact keys are simply absent.
 
     `confirm` must be the exact string 'spend <N>' where N == len(leads).
     Anything else raises. The awkwardness is the feature: no default, no

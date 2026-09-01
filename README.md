@@ -62,6 +62,12 @@ Then hand it to your agent (Claude Code, Codex, any CLI agent) and say:
 No keys ship in this repo. `.env.example` is blank slots. The pipeline runs
 end-to-end with `GTM_LLM=none` — deterministic only, keyword-gated.
 
+Two pieces are deliberately yours to write, and both are fully specified
+rather than shipped: the **harvest runner** (SETUP.md §6 — signature, query
+template, client choice) and the **enrichment provider adapter** (SETUP.md §8
+— endpoints, auth, contract). A shipped paid-vendor client rots against
+whichever vendor you actually use; a spec doesn't.
+
 ## Architecture
 
 ```

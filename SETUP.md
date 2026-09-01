@@ -69,10 +69,47 @@ inherit visit from a discovery cell's geography.
 
 ## 6. Harvest (long-running, headless)
 
-Use `gtm/harvest.py` with 3-4 instances from https://searx.space, ONE worker
-per instance. Pacing is 7-12s per instance and is an ethical floor —
-volunteer infrastructure, not a tunable. Schedule it (launchd/cron) and let
-it run overnight; it is crash-resumable via the ledger.
+`gtm/harvest.py` is a library with **no CLI on purpose** — it takes injected
+`fetch` and `query_fn` so it stays testable offline, so you write the ~30-line
+runner. Everything the runner must decide is specified here; none of it is
+yours to invent.
+
+```python
+harvest(companies, engines, fetch, ledger, out_path, query_fn)
+```
+
+| Arg | What to pass |
+|---|---|
+| `companies` | rows from `data/<icp>/derived/companies.jsonl` (written by `run.py hygiene`) |
+| `engines` | 3-4 `harvest.Engine(name, base_url)`; `base_url` ends at the query param, e.g. `"https://priv.au/search?q="` |
+| `fetch` | `fetch(url) -> (status: int, body: str)`, body = raw HTML |
+| `ledger` | `Ledger(data(icp) / "derived" / "ledger.json")` — same path `run.py status` reads |
+| `out_path` | **must** be `data/<icp>/raw/harvest_hits.jsonl` — `run.py join` hardcodes it |
+| `query_fn` | `query_fn(company_row) -> str` |
+
+**The query template.** This one parameter decides whether the harvest yields
+tens of thousands of URLs or nothing:
+
+```python
+query_fn = lambda c: f'site:linkedin.com/in "{c["company"]}"'
+```
+
+Return the query **unquoted** — `Engine.search` applies `urllib.parse.quote`
+itself, and double-quoting is the failure that looks like a total block.
+Add a title term only if a company over-returns; narrowing per-company costs
+more requests than it saves, and the title gate runs at join time anyway.
+
+**The fetch client.** Use plain `urllib` via `registries/_net.py` (the
+certifi-patched opener). SearXNG instances are not bot-walled — scrapling is
+for FSIS only, which is why `requirements.txt` keeps it commented out.
+Reach for scrapling here **only** if an instance starts returning challenge
+pages that `classify()` counts as blocks across several cool-offs; the
+cheaper fix is dropping that instance for another from searx.space.
+
+Run ONE worker per instance. Pacing is 7-12s per instance and is an ethical
+floor — volunteer infrastructure, not a tunable. Schedule it (launchd/cron)
+and let it run overnight; it is crash-resumable via the ledger, so a rerun
+continues where it stopped.
 
 ## 7. Join → QA → export
 
@@ -86,9 +123,40 @@ trusting the CSVs; MISFIT rows go to a recoverable sidecar.
 
 ## 8. Enrichment — ONLY on explicit human approval
 
-`gtm/enrich.py` refuses to run without `confirm='spend <N>'` where N is the
-exact row count. Show the human the count and the credit estimate, get their
-yes, then run. Phone-first: sort the final sheet by
+**The provider client is yours to build — this section is its spec.** No
+enrichment adapter ships here: the paid vendor is the one piece that must be
+BYOK, and a shipped client would rot against whichever vendor you actually
+use. Everything you need to write it is below.
+
+**Where it goes.** Create `gtm/providers/<vendor>.py` exposing a class with
+the two methods `gtm/enrich.py` calls — read that docstring for the exact
+contract (`estimate(n: int)`, `enrich(rows) -> rows`, and the recognised
+contact keys). There is deliberately no `run.py enrich` subcommand: money
+does not belong behind a CLI flag someone can shell-history their way into.
+Invoke it from a short script you write (`scripts/enrich_<icp>.py`) that
+loads the QA'd rows, prints the count and the estimate, waits for the human,
+then calls `request_enrichment(...)` with the confirm string.
+
+**FullEnrich** (the vendor the original runs used):
+- API docs: https://docs.fullenrich.com — read these before writing the client
+- Base URL: `https://app.fullenrich.com/api/v1`
+- Auth: `Authorization: Bearer $FULLENRICH_API_KEY` (slot in `.env.example`)
+- Shape: bulk enrichment is **asynchronous** — POST a batch, receive an
+  enrichment id, then poll for results. Budget for the poll loop; do not
+  assume a synchronous response.
+- Credits are per contact requested, not per contact found. That asymmetry is
+  the whole reason this stage runs last.
+
+**Apollo** is discovery, not enrichment, and has **no HTTP client in this
+repo by design** — §0 and §4 route it through your own authenticated tooling
+(an MCP server, a vendor CLI, or the web app). If you have none of those,
+Apollo's own API docs are at https://docs.apollo.io and the same
+build-your-own rules apply. Discovery cells can also be filled by hand from
+the registry universe; the pipeline does not require Apollo.
+
+**The gate.** `gtm/enrich.py` refuses to run without `confirm='spend <N>'`
+where N is the exact row count. Show the human the count and the credit
+estimate, get their yes, then run. Phone-first: sort the final sheet by
 `rank_contactability` (mobile > direct > switchboard > email-only).
 
 ## Done means proven

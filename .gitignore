@@ -4,5 +4,9 @@ __pycache__/
 venv/
 .env
 .env.*
+# .env.example is the committed template the docs tell you to copy; the
+# `.env.*` line above silently swallowed it for three releases (it shipped
+# from the exporter and git ate it every time). Negation must come after.
+!.env.example
 data/
 .DS_Store

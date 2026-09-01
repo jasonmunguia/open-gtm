@@ -10,9 +10,11 @@ Usage:
   python3 run.py status    --icp NAME       # counts per stage, ledger coverage
 
 Stages not in this CLI on purpose:
-  discovery (Apollo cells) and harvest (SearXNG) are AGENT-ORCHESTRATED —
-  see workflows/discovery-fanout.md. The judgment joints (interview,
-  classify, angles) live in prompts/. This CLI is the deterministic spine.
+  discovery (Apollo cells) is AGENT-ORCHESTRATED — see
+  workflows/discovery-fanout.md. Harvest (SearXNG) is a library you drive
+  from your own runner — SETUP.md section 6 is its full spec. Enrichment is
+  gated BYOK — SETUP.md section 8. The judgment joints (interview, classify,
+  angles) live in prompts/. This CLI is the deterministic spine.
 
 Every write goes under data/<icp>/. --dry-run prints what would happen.
 """
@@ -113,7 +115,7 @@ def cmd_join(args):
     hits_file = d / "raw" / "harvest_hits.jsonl"
     if not hits_file.is_file():
         print(f"no harvest hits at {hits_file} — run the harvest first "
-              f"(workflows/discovery-fanout.md)")
+              f"(SETUP.md section 6)")
         return 1
     hits = [json.loads(l) for l in hits_file.read_text().splitlines() if l.strip()]
     cand_files = sorted((d / "raw").glob("candidates_*.jsonl"))
