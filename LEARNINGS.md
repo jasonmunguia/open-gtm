@@ -7,6 +7,35 @@ than a missing one, because it stops anyone from looking.
 
 ---
 
+## 2026-09-01 — A file can ship from the exporter and still not exist
+
+An adversarial startup_test (three cold auditors, then an independent refute
+pass on every claimed failure — 3 stood, 0 refuted) found `.env.example`
+missing from the public repo. It had been in the exporter's allowlist since
+the first release. The exporter wrote it every time; `.gitignore`'s `.env.*`
+matched it every time; git dropped it silently every time. Three releases.
+
+**The rule:** an exporter that writes a file the destination repo ignores has
+not exported it. Ask git, don't assume — the export now runs `git
+check-ignore` over everything it wrote and fails the release on any hit.
+
+**The flag that matters:** `git check-ignore --stdin` alone is not enough. It
+stays quiet about paths already in the destination index, which is exactly
+the second-export-onward case. Without `--no-index` the guard silently
+passes. Found by deliberately breaking `.gitignore` and confirming the guard
+failed — a guard never seen to fire is not a guard.
+
+Two doc failures came from the same audit, both the same shape: a pointer to
+a spec that was never written. `enrich.py` said the provider client is "built
+per SETUP.md" while §8 described only the spend gate, and SETUP §6 said "use
+`gtm/harvest.py`" — a module with no CLI by design — delegating to a workflow
+doc that never mentions harvest. A cold agent had to invent the SearXNG query
+template, the one parameter that decides whether a harvest returns ~49k URLs
+or nothing. **A cross-reference is a promise; grep the target before shipping
+the pointer.** Also fixed: `estimate()`'s docstring said `(rows)` while the
+call site passed `len(leads)`, so an adapter written from the docs broke on
+an int.
+
 ## 2026-08-17 — The release gate and the live run each caught what the other couldn't
 
 Recruiters will read this repo, so every claim was converted to a machine
