@@ -93,12 +93,13 @@ Your context is one file, `icps/<name>/outreach.yaml`, written by an
 adversarial interview (`prompts/outreach-interview.md`): the note (≤300
 chars, stranger-tested), the search tiers, the deny-lists, and the
 **protected list** — customers, vendors, investors — who are never visited,
-let alone pitched. The machinery is generic. It needs a Premium LinkedIn
-account and any Chromium browser; it launches its own profile so yours is
+let alone pitched. The machinery is generic. It needs a [Premium LinkedIn
+account](https://www.linkedin.com/premium/) and any Chromium browser; it launches its own profile so yours is
 untouched.
 
 Per ICP: `data/<icp>/raw/` (immutable) → `derived/` (disposable — delete it
-and the next run rebuilds identically) → `out/` (call + visit CSVs).
+and the next run rebuilds identically) → `out/` (call + visit CSVs, outreach
+ledger). `outreach/` holds the browser profile — gitignored with the rest.
 
 ## License
 

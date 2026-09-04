@@ -334,5 +334,54 @@ class TestPhaseA(unittest.TestCase):
         self.assertEqual([r["status"] for r in led.rows()], ["protected"])
 
 
+class TestExampleConfigComplete(unittest.TestCase):
+    def test_example_declares_every_default_key(self):
+        # The example claims "every field the outreach stage reads is here";
+        # this guards that claim against DEFAULTS growing without it.
+        raw = yaml.safe_load(EXAMPLE.read_text())
+        missing = set(ocfg.DEFAULTS) - set(raw)
+        self.assertEqual(missing, set(), f"example outreach.yaml lacks {sorted(missing)}")
+        for k in ("cdp_url", "binary", "port", "offscreen", "window_bounds"):
+            self.assertIn(k, raw["browser"])
+
+
+class TestSendConsumesReviewedQueue(unittest.TestCase):
+    """The gate is only real if --send contacts what the human reviewed."""
+
+    def _cfg_and_ledger(self):
+        d = tempfile.mkdtemp()
+        return cfg_with(), OutreachLedger(Path(d) / "l.csv"), Path(d)
+
+    def test_queue_entries_sent_in_order_and_attempted_skipped(self):
+        cfg, led, _d = self._cfg_and_ledger()
+        led.append("Old One", "", "", "1", "skipped", "vetoed by hand", "https://www.linkedin.com/in/old-one")
+        sent = []
+
+        class S:
+            ledger = led
+            def attempt(self, c):
+                sent.append(c["url"]); return True
+
+        queue = [{"name": "Old One", "url": "https://www.linkedin.com/in/old-one/", "tier": "1"},
+                 {"name": "Ada Bell", "url": "https://www.linkedin.com/in/ada-bell", "tier": "1"},
+                 {"name": "Bo Chen", "url": "https://www.linkedin.com/in/bo-chen", "tier": "1"}]
+        import gtm.outreach.orchestrate as o
+        real_sleep = o.time.sleep
+        o.time.sleep = lambda *_: None
+        try:
+            got = o.phase_b(S(), queue, need=5, cfg=cfg, log=lambda *_: None)
+        finally:
+            o.time.sleep = real_sleep
+        self.assertEqual(got, 2)
+        self.assertEqual(sent, ["https://www.linkedin.com/in/ada-bell", "https://www.linkedin.com/in/bo-chen"])
+
+    def test_read_queue_missing_is_empty(self):
+        import gtm.outreach.orchestrate as o
+        self.assertEqual(o.read_queue(Path(tempfile.mkdtemp()) / "nope.jsonl"), [])
+        q = Path(tempfile.mkdtemp()) / "q.jsonl"
+        q.write_text(json.dumps({"name": "A B", "url": "u"}) + "\n\n")
+        self.assertEqual(o.read_queue(q), [{"name": "A B", "url": "u"}])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

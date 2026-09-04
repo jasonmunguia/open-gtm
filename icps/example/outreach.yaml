@@ -74,10 +74,17 @@ weekly_cap: 100
 weekly_buffer: 10
 gap_minutes: [1, 4]
 
+# Sourcing depth. Defaults are the values the original runs settled on.
+per_search: 6      # cap per query so one search cannot dominate the pool
+bench: 0.5         # vet 50% more than you send — "no Connect path" only shows after opening a profile
+max_rounds: 6      # refill rounds before admitting the pool is dry
+
 # Browser. Leave empty to launch a dedicated Chrome profile under data/<icp>/
 # (first run: log in once in the window that opens). To use a browser you
 # launched yourself with --remote-debugging-port=9222, set cdp_url.
 browser:
   cdp_url: null          # e.g. "http://127.0.0.1:9222"
   binary: null           # override auto-detection with a path
+  port: 9333             # debug port for the launched profile (change on collision)
   offscreen: true        # park the window past the screen corner; never focused
+  window_bounds: null    # override the offscreen spot, e.g. {left: 1600, top: 1000, width: 1100, height: 850}

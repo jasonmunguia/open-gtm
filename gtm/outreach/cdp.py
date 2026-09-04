@@ -155,7 +155,9 @@ class Browser:
                 log(f"launched {Path(exe).name} on :{port} (profile {profile_dir})")
                 return cls(base, proc)
             time.sleep(1)
-        raise RuntimeError(f"{exe} did not open port {port} within 30s")
+        raise RuntimeError(f"{Path(exe).name} did not open port {port} within 30s. Usually another copy of "
+                           f"it is already running without the debug flag: quit it fully and re-run. "
+                           f"Nothing was sent.")
 
     def alive(self):
         return _alive(self.base)
@@ -182,7 +184,8 @@ class Browser:
         time.sleep(6)
         tabs = {t["id"]: t for t in self.targets()}
         if tid not in tabs:
-            raise WindowGone("created a target but it is not listed — browser refused the window")
+            raise WindowGone("created a target but it is not listed — the browser refused the window. "
+                             "Quit every window of that browser and re-run; nothing was sent.")
         return Page(tabs[tid]["webSocketDebuggerUrl"]), tid
 
     def _window(self, page, tid):

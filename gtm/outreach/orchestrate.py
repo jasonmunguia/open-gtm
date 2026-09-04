@@ -43,8 +43,9 @@ def phase_a(page, sender, cfg, ledger, want, start_page, log, sleep=time.sleep):
         if reason == "position API failed":
             infra_fails += 1
             if infra_fails >= 3:
-                raise RuntimeError("positions API failed 3x — session/rate-limit problem, "
-                                   "not a candidate problem. Nothing sent.")
+                raise RuntimeError("positions API failed 3x — a session or rate-limit problem, not a "
+                                   "candidate problem. Nothing sent. Run `outreach --check`: if it "
+                                   "shows logged in, wait an hour and re-run; if not, log in there.")
         if reason:
             rejected.append({**c, "reason": reason})
             log(f"  REJECT  {c['name'][:22]:22} {reason[:50]}")
@@ -55,14 +56,24 @@ def phase_a(page, sender, cfg, ledger, want, start_page, log, sleep=time.sleep):
     return vetted, rejected, len(pool)
 
 
+def read_queue(path):
+    """The reviewed queue. Lines the human deleted are gone — that is the veto."""
+    if not path.is_file():
+        return []
+    return [json.loads(l) for l in path.read_text().splitlines() if l.strip()]
+
+
 def phase_b(sender, queue, need, cfg, log):
     from .sender import WrongRecipient
     gaps = pacing.make_gaps(need, *cfg.gap_minutes)
     log(f"Phase B: target {need}, {len(queue)} vetted, est {sum(gaps):.0f} min")
     sends, gi, owe_gap = 0, 0, False
+    attempted = sender.ledger.attempted()
     for cand in queue:
         if sends >= need:
             break
+        if cand["url"].rstrip("/") in attempted:
+            continue          # ledgered since the queue was written (a hand-added skip, or a prior run)
         if owe_gap and gi < len(gaps):
             log(f"WAIT {gaps[gi]} min")
             time.sleep(gaps[gi] * 60)
@@ -119,12 +130,24 @@ def run(icp_name, send=False, check=False, log=print):
                 for c in vetted:
                     f.write(json.dumps(c) + "\n")
             log(f"\n{len(vetted)} vetted, {len(rejected)} rejected, {n} sourced -> {p['queue']}")
-            log("Review the queue. Re-run with --send to send to it (it is re-sourced fresh, "
-                "so anyone you ledger as `skipped` by hand is excluded).")
+            log("Review the queue: delete any line you don't want contacted. "
+                "Then re-run with --send — it sends to THIS file first, and only "
+                "sources more if the queue runs short of the allowance.")
             return 0
 
-        # --send: source → send → refill until EXACTLY `allowance` sends.
+        # --send: the reviewed queue first. The gate is only real if what the
+        # human saw is what gets contacted; re-sourcing first would make the
+        # review advisory (caught by the audit before the first release).
         sent_total, rnd, pg = 0, 0, 1
+        queued = read_queue(p["queue"])
+        if queued:
+            log(f"--- reviewed queue: {len(queued)} candidates ---")
+            got = phase_b(sender, queued, allowance, cfg, log)
+            sent_total += got
+            p["queue"].unlink()          # consumed; a stale queue must never be re-sent
+            log(f"queue: +{got} sent (total {sent_total}/{allowance})")
+        else:
+            log("no reviewed queue on disk — sourcing fresh (run without --send first to review)")
         while sent_total < allowance and rnd < cfg.max_rounds:
             rnd += 1
             need = allowance - sent_total

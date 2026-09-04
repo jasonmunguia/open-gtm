@@ -17,7 +17,7 @@ NOTE_MAX = 300   # LinkedIn's connection-note limit; the dialog counter reads N/
 # a new one), ~100/week widely reported. Penalty for crossing is asymmetric:
 # a restriction of ~a week that Support will not lift early. Undershoot.
 DEFAULTS = {
-    "geo_urn": "103644278",       # United States. Others: docs/SETUP.md §9
+    "geo_urn": "103644278",       # United States. Others: SETUP.md §9
     "daily_target": 20,
     "weekly_cap": 100,
     "weekly_buffer": 10,          # headroom for invites you send by hand

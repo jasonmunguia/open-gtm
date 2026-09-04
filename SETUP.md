@@ -166,7 +166,8 @@ tiered LinkedIn people-search → machine-checked vetting → paced connection
 requests carrying ONE fixed note → every send verified against LinkedIn's own
 sent-invitations API before it is ledgered.
 
-**What the human brings.** A LinkedIn account that is **Premium** (Basic caps
+**What the human brings.** A LinkedIn account that is **Premium**
+(https://www.linkedin.com/premium/ — Basic caps
 connection notes at a handful per month, which makes this whole step
 pointless — ask before anything else) and a Chromium-family browser (Chrome,
 Chromium, Brave, Edge; auto-detected).
@@ -198,10 +199,14 @@ python3 run.py outreach --icp <name>          # Phase A: source + vet -> queue. 
 python3 run.py outreach --icp <name> --send   # Phase B: paced sends, API-verified, ledgered.
 ```
 
-Show the human the queue (`data/<name>/derived/outreach_queue.jsonl`) before
-`--send`. The gate is deliberate: a LinkedIn restriction is behaviour-based,
-lasts ~a week, Support will not lift it early, and withdrawing invites does
-not help. They decide when a batch goes.
+Show the human the queue (`data/<name>/derived/outreach_queue.jsonl`, one
+person per line: name, headline, company, title, profile URL) before
+`--send`. **The veto is deleting a line** — you do that on their say-so.
+`--send` sends to that file first, deletes it once consumed, and sources
+more only if it ran short of the allowance. The gate is deliberate: a
+LinkedIn restriction is behaviour-based, lasts ~a week, Support will not
+lift it early, and withdrawing invites does not help. They decide when a
+batch goes.
 
 **Trigger: the human says so. Never a schedule.** Off-hours activity at fixed
 times is a commonly cited automation signal; the pacing (randomized 1-4 min
@@ -214,9 +219,22 @@ not "a new invitation exists". If the note is found on a different recipient,
 the runner withdraws it and exits 2; read the ledger before running again.
 
 **Ledger = deliverable:** `data/<name>/out/linkedin_outreach.csv` — every
-attempt (sent / skipped+reason / protected / error), append-only, the dedupe
-source of truth. Sync it wherever the human tracks pipeline; that is your
-job, not this repo's.
+attempt, append-only, the dedupe source of truth. `status` values: `sent`
+(API-verified) · `sent-note-mismatch` (it went out, note length differed —
+counts as a send, investigate) · `skipped` + reason · `protected` · `error` ·
+`withdrawn` (the wrong-recipient emergency path). Sync it wherever the human
+tracks pipeline; that is your job, not this repo's.
+
+**If the run prints `ABORT:`** — nothing was sent in that run unless the line
+says otherwise. Map the message to the action:
+
+| Message contains | Do |
+|---|---|
+| `did not open port` / `refused the window` | Quit every window of that browser (it is running without the debug flag), re-run. |
+| `no LinkedIn session after` | The login window was open for 10 minutes and nobody logged in. Re-run and log in. |
+| `positions API failed 3x` | Session or rate limit. `--check`: logged in → wait an hour, re-run; not logged in → log in. |
+| `nothing answering at` (attach mode) | The browser you launched isn't on that port. Re-launch it with `--remote-debugging-port`, or clear `cdp_url` to use the dedicated profile. |
+| `WRONG RECIPIENT` / exit 2 | Something WAS sent, to the wrong person, and withdrawn if possible. Open linkedin.com/mynetwork/invitation-manager/sent/ and read the ledger before running again. |
 
 **Attach mode.** If the human wants their own browser: launch it with
 `--remote-debugging-port=9222`, log in to LinkedIn, set

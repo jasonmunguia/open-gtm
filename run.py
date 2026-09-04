@@ -188,7 +188,18 @@ def cmd_status(args):
 
 def cmd_outreach(args):
     from gtm.outreach import orchestrate
-    return orchestrate.run(args.icp, send=args.send, check=args.check or args.dry_run)
+    if args.dry_run:
+        # Touch nothing: no browser, no network. Print what a run would use.
+        from gtm.outreach import config as ocfg
+        cfg = ocfg.load(args.icp)
+        p = orchestrate.paths(args.icp)
+        print(f"would use {cfg.path}: {len(cfg.searches)} searches, note {len(cfg.note)}/300, "
+              f"{len(cfg.protected)} protected, {cfg.daily_target}/day, {cfg.weekly_cap}-{cfg.weekly_buffer}/week")
+        print(f"browser: {'attach ' + cfg.browser['cdp_url'] if cfg.browser.get('cdp_url') else 'launch dedicated profile ' + str(p['profile'])}")
+        print(f"ledger: {p['ledger']}\nqueue:  {p['queue']}")
+        print("mode:   " + ("SEND (after review)" if args.send else "check only" if args.check else "phase A only (sends nothing)"))
+        return 0
+    return orchestrate.run(args.icp, send=args.send, check=args.check)
 
 
 def main():
@@ -204,9 +215,10 @@ def main():
     # never a default, and --dry-run means --check (touch nothing).
     po = sub.add_parser("outreach")
     po.add_argument("--icp", required=True)
-    po.add_argument("--send", action="store_true", help="actually send to the vetted queue")
+    po.add_argument("--send", action="store_true",
+                    help="send to the reviewed queue file first, then source more only if short")
     po.add_argument("--check", action="store_true", help="allowance + login only")
-    po.add_argument("--dry-run", action="store_true")
+    po.add_argument("--dry-run", action="store_true", help="print config + paths, launch nothing")
     args = ap.parse_args()
     return {"check": cmd_check, "registry": cmd_registry, "hygiene": cmd_hygiene,
             "join": cmd_join, "export": cmd_export, "status": cmd_status,
