@@ -1,0 +1,83 @@
+# EXAMPLE outreach config — pairs with icps/example/icp.yaml (dispatch software
+# for commercial mechanical service contractors). Every field the outreach
+# stage reads is here. Yours is produced by prompts/outreach-interview.md.
+
+# The connection note. ≤300 chars — the dialog counter must read exactly
+# this length before Send, or the runner refuses. One ask, no links, no
+# personalization tokens: this exact text goes to every person, verbatim.
+note: >-
+  Hey — I build dispatch software for commercial mechanical contractors; it
+  cuts the paperwork between a finished job and a sent invoice. Would you be
+  open to a 15-minute call on whether that's a real problem for your service
+  crews? Happy to show it live.
+
+# LinkedIn geo filter, applied at the search layer (never eyeballed).
+# 103644278 = United States. Others: 101165590 UK · 101174742 Canada ·
+# 101452733 Australia · 101282230 Germany. Find more in any LinkedIn people
+# search URL after choosing a location: the number inside geoUrn=[...].
+geo_urn: "103644278"
+
+# Tiered searches, round-robin so no tier starves another. Pair a generic
+# title with an industry keyword — bare "operations manager" returns noise.
+searches:
+  - {tier: 1, query: "service manager HVAC"}
+  - {tier: 1, query: "service operations manager mechanical"}
+  - {tier: 1, query: "dispatch manager HVAC"}
+  - {tier: 2, query: "operations manager mechanical contractor"}
+  - {tier: 2, query: "field supervisor HVAC"}
+  - {tier: 2, query: "branch manager mechanical services"}
+  - {tier: 3, query: "ServiceTitan operations"}
+  - {tier: 3, query: "work order management HVAC"}
+
+# Substring match on the API-returned CURRENT employer. Mega-corps, staffing,
+# and anyone who structurally cannot buy. Case-insensitive.
+deny_employers:
+  - staffing
+  - recruit
+  - talent
+  - property management
+  - realty
+  - real estate
+  - school district
+  - "department of"
+  - "city of"
+  - "county of"
+
+# Substring match on the API-returned CURRENT title. Sellers, HR, and IC
+# roles that read senior but own no crew or budget.
+deny_titles:
+  - account manager
+  - sales manager
+  - sales rep
+  - business development
+  - marketing
+  - recruiter
+  - talent
+  - human resources
+  - technician
+  - apprentice
+  - dispatcher
+  - consultant
+  - student
+
+# NEVER contacted, never even visited. Customers, vendors, investors,
+# partners, anyone a cold pitch would embarrass you with. Profile URLs,
+# slugs, or full names. Empty is a decision, not a default — the interview
+# asks.
+protected: []
+
+# Volume. Practitioner consensus, not LinkedIn policy (they publish none):
+# ~20/day aged account, ~100/week. The run computes its allowance from the
+# account's real 7-day load, so invites you send by hand count too.
+daily_target: 20
+weekly_cap: 100
+weekly_buffer: 10
+gap_minutes: [1, 4]
+
+# Browser. Leave empty to launch a dedicated Chrome profile under data/<icp>/
+# (first run: log in once in the window that opens). To use a browser you
+# launched yourself with --remote-debugging-port=9222, set cdp_url.
+browser:
+  cdp_url: null          # e.g. "http://127.0.0.1:9222"
+  binary: null           # override auto-detection with a path
+  offscreen: true        # park the window past the screen corner; never focused

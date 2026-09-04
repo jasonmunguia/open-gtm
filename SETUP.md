@@ -159,6 +159,69 @@ where N is the exact row count. Show the human the count and the credit
 estimate, get their yes, then run. Phone-first: sort the final sheet by
 `rank_contactability` (mobile > direct > switchboard > email-only).
 
+## 9. Outreach — LinkedIn first touch (BYOK: their account, their browser)
+
+The lead CSV is the product of steps 2-8. This step is the first touch on it:
+tiered LinkedIn people-search → machine-checked vetting → paced connection
+requests carrying ONE fixed note → every send verified against LinkedIn's own
+sent-invitations API before it is ledgered.
+
+**What the human brings.** A LinkedIn account that is **Premium** (Basic caps
+connection notes at a handful per month, which makes this whole step
+pointless — ask before anything else) and a Chromium-family browser (Chrome,
+Chromium, Brave, Edge; auto-detected).
+
+**What you produce.** Run `prompts/outreach-interview.md` with the human. It
+is adversarial: the note must survive the stranger test, and the protected
+list — customers, vendors, investors, anyone a cold pitch would embarrass
+them with — is the question people skip. Output: `icps/<name>/outreach.yaml`
+(schema: `icps/example/outreach.yaml`). `python3 run.py check` validates it.
+
+**First run (visible, once).**
+
+```bash
+python3 run.py outreach --icp <name> --check
+```
+
+A dedicated Chrome profile launches under `data/<name>/outreach/profile/`
+(gitignored with the rest of `data/`; their daily browser is never touched).
+If not logged in, the window comes on screen and the run waits up to 10
+minutes for the human to log in. The session persists after that. Then it
+prints the account's last-7-day invite load and this run's allowance —
+`min(daily_target, weekly_cap − weekly_buffer − sent_last_7d)` — computed
+from the account itself, so hand-sent invites count too.
+
+**Every run after that: two commands, one gate.**
+
+```bash
+python3 run.py outreach --icp <name>          # Phase A: source + vet -> queue. Sends NOTHING.
+python3 run.py outreach --icp <name> --send   # Phase B: paced sends, API-verified, ledgered.
+```
+
+Show the human the queue (`data/<name>/derived/outreach_queue.jsonl`) before
+`--send`. The gate is deliberate: a LinkedIn restriction is behaviour-based,
+lasts ~a week, Support will not lift it early, and withdrawing invites does
+not help. They decide when a batch goes.
+
+**Trigger: the human says so. Never a schedule.** Off-hours activity at fixed
+times is a commonly cited automation signal; the pacing (randomized 1-4 min
+gaps) and the caps are the guardrails, not a cron.
+
+**What "sent" means here** (`gtm/outreach/verify.py`): the sent-invitations
+API lists an invite whose recipient slug matches the intended profile AND
+whose message equals the note verbatim. Nothing else counts — not the toast,
+not "a new invitation exists". If the note is found on a different recipient,
+the runner withdraws it and exits 2; read the ledger before running again.
+
+**Ledger = deliverable:** `data/<name>/out/linkedin_outreach.csv` — every
+attempt (sent / skipped+reason / protected / error), append-only, the dedupe
+source of truth. Sync it wherever the human tracks pipeline; that is your
+job, not this repo's.
+
+**Attach mode.** If the human wants their own browser: launch it with
+`--remote-debugging-port=9222`, log in to LinkedIn, set
+`browser.cdp_url: "http://127.0.0.1:9222"` in outreach.yaml.
+
 ## Done means proven
 
 - [ ] `python3 run.py check` exit 0
@@ -167,6 +230,7 @@ estimate, get their yes, then run. Phone-first: sort the final sheet by
 - [ ] one end-to-end fixture run: hygiene → join → export produced a CSV
 - [ ] harvest scheduled headless, ledger advancing
 - [ ] human knows the enrichment gate exists and how to approve a spend
+- [ ] (if outreach configured) `run.py outreach --icp <name> --check` printed an allowance; human knows `--send` is the only thing that sends
 
 Report each with the command and its exit code. Anything you could not run:
 say **unverified** and name the exact check the human must perform.

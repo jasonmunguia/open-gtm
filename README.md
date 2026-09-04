@@ -75,7 +75,27 @@ deterministic spine (run.py)          agent joints (prompts/)
   registry → hygiene → join → export    interview · classify · angle
 agent-orchestrated (workflows/)       paid terminal stage (gated)
   discovery fan-out · paced harvest     enrich: phone-first, confirm='spend N'
+first touch (gtm/outreach/, gated)
+  LinkedIn: tiered search → API-vetted → queue → --send → API-verified ledger
 ```
+
+## Outreach — the first touch, BYOK
+
+The CSV is not the end. `run.py outreach --icp <name>` runs tiered LinkedIn
+people-searches for your ICP, vets every candidate against the profile API
+(never the headline — headlines lie), and writes a queue. **Nothing is sent
+until you pass `--send`**, and then every connection request carries your one
+fixed note and is ledgered only after LinkedIn's own sent-invitations API
+shows it landed on the intended person with the note verbatim. A note that
+lands on the wrong person is withdrawn and the run aborts.
+
+Your context is one file, `icps/<name>/outreach.yaml`, written by an
+adversarial interview (`prompts/outreach-interview.md`): the note (≤300
+chars, stranger-tested), the search tiers, the deny-lists, and the
+**protected list** — customers, vendors, investors — who are never visited,
+let alone pitched. The machinery is generic. It needs a Premium LinkedIn
+account and any Chromium browser; it launches its own profile so yours is
+untouched.
 
 Per ICP: `data/<icp>/raw/` (immutable) → `derived/` (disposable — delete it
 and the next run rebuilds identically) → `out/` (call + visit CSVs).

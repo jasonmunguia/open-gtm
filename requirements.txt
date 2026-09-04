@@ -1,5 +1,6 @@
 pyyaml>=6
 certifi>=2024.0
 pytest>=8
+websockets>=12      # outreach stage: Chrome DevTools Protocol client
 # fsis registry only (bot-walled site needs a stealth browser fetch):
 # scrapling>=0.4

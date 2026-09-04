@@ -8,6 +8,9 @@ Usage:
   python3 run.py join      --icp NAME       # harvest hits + candidates -> leads
   python3 run.py export    --icp NAME       # write call/visit CSVs
   python3 run.py status    --icp NAME       # counts per stage, ledger coverage
+  python3 run.py outreach  --icp NAME       # LinkedIn: source + vet -> queue (sends NOTHING)
+  python3 run.py outreach  --icp NAME --send   # ...then send, paced, API-verified
+  python3 run.py outreach  --icp NAME --check  # allowance + login state only
 
 Stages not in this CLI on purpose:
   discovery (Apollo cells) is AGENT-ORCHESTRATED — see
@@ -46,6 +49,11 @@ def cmd_check(args):
             print(f"icp {n}: OK ({len(icp.segments)} segments, "
                   f"{len(icp.raw['titles']['ops'])} ops titles, "
                   f"{len(icp.drop_named)} named drops)")
+            if (icp.path.parent / "outreach.yaml").is_file():
+                from gtm.outreach import config as ocfg
+                oc = ocfg.load(n)
+                print(f"  outreach: OK ({len(oc.searches)} searches, note {len(oc.note)}/300, "
+                      f"{len(oc.protected)} protected)")
         except Exception as e:  # noqa: BLE001 — check reports every ICP failure, whatever it is
             print(f"icp {n}: FAIL — {e}")
             return 1
@@ -178,6 +186,11 @@ def cmd_status(args):
     return 0
 
 
+def cmd_outreach(args):
+    from gtm.outreach import orchestrate
+    return orchestrate.run(args.icp, send=args.send, check=args.check or args.dry_run)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -187,9 +200,17 @@ def main():
         if name != "check":
             p.add_argument("--icp", required=True)
         p.add_argument("--dry-run", action="store_true")
+    # outreach gets its own parser: the irreversible action is behind --send,
+    # never a default, and --dry-run means --check (touch nothing).
+    po = sub.add_parser("outreach")
+    po.add_argument("--icp", required=True)
+    po.add_argument("--send", action="store_true", help="actually send to the vetted queue")
+    po.add_argument("--check", action="store_true", help="allowance + login only")
+    po.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
     return {"check": cmd_check, "registry": cmd_registry, "hygiene": cmd_hygiene,
-            "join": cmd_join, "export": cmd_export, "status": cmd_status}[args.cmd](args)
+            "join": cmd_join, "export": cmd_export, "status": cmd_status,
+            "outreach": cmd_outreach}[args.cmd](args)
 
 
 if __name__ == "__main__":
